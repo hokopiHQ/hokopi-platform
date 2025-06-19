@@ -1,0 +1,21 @@
+# Étape base
+FROM node:20-alpine AS base
+WORKDIR /app/backend
+COPY backend/package*.json .
+RUN npm install
+
+# Étape dev
+FROM base AS dev
+CMD ["npm", "run", "start:dev"]
+
+# Étape build
+FROM base AS build
+RUN npm run build
+
+# Étape prod
+FROM node:20-alpine AS prod
+WORKDIR /app
+COPY --from=build /app/backend/dist ./dist
+COPY backend/package*.json .
+RUN npm install --only=production
+CMD ["node", "dist/main"]

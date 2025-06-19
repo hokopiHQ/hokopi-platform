@@ -1,0 +1,45 @@
+version: '3.9'
+name: app-dev
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+      target: dev
+    volumes:
+      - ../backend:/app/backend
+      - ../shared:/app/shared
+      - /app/backend/node_modules
+    ports:
+      - '5001:3000'
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5433/db
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      target: dev
+    volumes:
+      - ../frontend:/app/frontend
+      - ../shared:/app/shared
+      - /app/frontend/node_modules
+    ports:
+      - '8080:8080'
+    command: npm run dev
+volumes:
+  postgres_data:
