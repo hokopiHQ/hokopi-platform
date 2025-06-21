@@ -26,8 +26,11 @@ services:
       - '5001:3000'
     depends_on:
       - postgres
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5433/db
+    # environment:
+    #   - NODE_ENV=development
+    # - DATABASE_URL=postgresql://postgres:postgres@postgres:5433/db
+    env_file:
+      - ../backend/.env.development
 
   frontend:
     build:
