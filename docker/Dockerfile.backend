@@ -6,7 +6,7 @@ RUN npm install
 
 # Étape dev
 FROM base AS dev
-CMD ["npm", "run", "start:dev"]
+CMD ["sh", "-c", "npx prisma db push && npm run start:dev"]
 
 # Étape build
 FROM base AS build
