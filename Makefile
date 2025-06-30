@@ -26,4 +26,7 @@ dev.db.reset:
 dev.db.generate:
 	docker compose -f docker/docker-compose.dev.yml exec backend npx prisma generate
 
+dev.db.sh:
+	docker compose -f docker/docker-compose.dev.yml exec backend sh
+
 
