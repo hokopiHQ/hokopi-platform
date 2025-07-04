@@ -1,0 +1,41 @@
+name: app
+
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    ports:
+      - '5432:5432' # Mappe le port 5432 du conteneur au port 5433 de l'hôte VM
+    env_file:
+      - ../backend/.env.production
+    # environment:
+    #   POSTGRES_USER: ${POSTGRES_USER} # Référencera le secret GitHub Actions
+    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Référencera le secret GitHub Actions
+    #   POSTGRES_DB: ${POSTGRES_DB} # Référencera le secret GitHub Actions
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Volume persistant pour les données de la base
+
+  backend:
+    build:
+      context: .. # Le contexte est la racine du dépôt (/var/www/mon-app)
+      dockerfile: docker/Dockerfile.backend # Chemin relatif depuis le contexte
+      target: prod # Utilise l'étape 'prod' de Dockerfile.backend
+    depends_on:
+      - postgres
+    env_file:
+      - ../backend/.env.production
+    restart: always
+
+  frontend:
+    build:
+      context: .. # Le contexte est la racine du dépôt (/var/www/mon-app)
+      dockerfile: docker/Dockerfile.frontend # Chemin relatif depuis le contexte
+      target: prod # Utilise l'étape 'prod' de Dockerfile.frontend
+    ports:
+      - '80:80'
+    restart: always
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
