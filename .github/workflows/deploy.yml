@@ -9,6 +9,7 @@ on:
 jobs:
   vm:
     runs-on: ubuntu-latest
+    container: ubuntu:latest
 
     env:
       SSH_USER: ${{ vars.SSH_USER }}
@@ -21,7 +22,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install ssh client
-        run: apt-get update && apt-get install -y openssh-client
+        run: |
+          if command -v sudo >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y openssh-client
+          else
+            apt-get update && apt-get install -y openssh-client
+          fi
 
       - name: Setup SSH
         run: |
@@ -32,13 +38,17 @@ jobs:
 
       - name: Deploy to ${{ env.ENVIRONMENT }} - branch ${{ env.BRANCH }}
         run: |
-          ssh $SSH_USER@$SSH_SERVER <<EOF
+          ssh $SSH_USER@$SSH_SERVER <<'EOF'
           set -e
 
           cd /var/www/app
-          #git fetch origin
-          #git checkout $BRANCH
-          #git pull origin $BRANCH
+          if [ ! -d .git ]; then
+            echo "📥 Première installation - clonage du dépôt"
+            git clone git@github.com:badelgeek/chefpocket.git .
+          fi
+          git fetch origin
+          git checkout $BRANCH
+          git pull origin $BRANCH
 
           echo "📦 Génération backend/.env.production"
           cat <<EOT > backend/.env.production
@@ -59,11 +69,27 @@ jobs:
           docker compose -f docker/docker-compose.prod.yml down
           docker compose -f docker/docker-compose.prod.yml up --build -d
 
+          POSTGRES_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q postgres) 
+          BACKEND_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q backend)                                 
+
+          echo "🕒 Waiting PostgreSQL (20s max)"
+          RETRIES=10
+          until docker exec $POSTGRES_CONTAINER pg_isready -U ${{ secrets.BACKEND_POSTGRES_USER }} || [ $RETRIES -eq 0 ]; do
+            echo "⏳ ..."
+            sleep 2
+            ((RETRIES--))
+          done
+
+          if [ $RETRIES -eq 0 ]; then
+            echo "❌ PostgreSQL is not ready. Cancel!"
+            exit 1
+          fi
+
           echo "🔁 Prisma Migrate Deploy"
-          docker compose -f docker/docker-compose.prod.yml exec backend npx prisma migrate deploy
+          docker exec $BACKEND_CONTAINER npx prisma migrate deploy
 
           echo "🌱 Seed initial data (Units, etc.)"
-          docker compose -f docker/docker-compose.prod.yml exec backend npx --yes tsx prisma/seed/seed.ts
+          docker exec $BACKEND_CONTAINER npx --yes tsx prisma/seed/seed.ts
 
           echo "✅ Déploiement $ENVIRONMENT terminé sur la branche $BRANCH"
           EOF
