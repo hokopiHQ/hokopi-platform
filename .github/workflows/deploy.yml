@@ -7,10 +7,10 @@ on:
       - main
 
 jobs:
-  vm:
+  deploy:
     runs-on: ubuntu-latest
     container: ubuntu:latest
-
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preprod' }}
     env:
       SSH_USER: ${{ vars.SSH_USER }}
       SSH_SERVER: ${{ vars.SSH_SERVER }}
@@ -48,6 +48,7 @@ jobs:
           fi
           git fetch origin
           git checkout $BRANCH
+          git restore .
           git pull origin $BRANCH
 
           echo "📦 Génération backend/.env.production"
@@ -68,6 +69,8 @@ jobs:
           echo "🚀 Docker Compose build & restart"
           docker compose -f docker/docker-compose.prod.yml down
           docker compose -f docker/docker-compose.prod.yml up --build -d
+
+          sleep 5
 
           POSTGRES_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q postgres) 
           BACKEND_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q backend)                                 
@@ -91,5 +94,5 @@ jobs:
           echo "🌱 Seed initial data (Units, etc.)"
           docker exec $BACKEND_CONTAINER npx --yes tsx prisma/seed/seed.ts
 
-          echo "✅ Déploiement $ENVIRONMENT terminé sur la branche $BRANCH"
+          echo "✅ The End !!"
           EOF
