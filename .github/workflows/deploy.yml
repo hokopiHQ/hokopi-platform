@@ -5,6 +5,7 @@ on:
     branches:
       - develop
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -34,7 +35,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$SSH_SERVER" >> ~/.ssh/known_hosts
+          ssh-keyscan -p 22 -H $SSH_SERVER > ~/.ssh/known_hosts
 
       - name: Deploy to ${{ env.ENVIRONMENT }} - branch ${{ env.BRANCH }}
         run: |
@@ -67,17 +68,17 @@ jobs:
           EOT
 
           echo "🚀 Docker Compose build & restart"
-          docker compose -f docker/docker-compose.prod.yml down
-          docker compose -f docker/docker-compose.prod.yml up --build -d
+          sudo docker compose -f docker/docker-compose.prod.yml down
+          sudo docker compose -f docker/docker-compose.prod.yml up --build -d
 
           sleep 5
 
-          POSTGRES_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q postgres) 
-          BACKEND_CONTAINER=$(docker compose -f docker/docker-compose.prod.yml ps -q backend)                                 
+          POSTGRES_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q postgres) 
+          BACKEND_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q backend)                                 
 
           echo "🕒 Waiting PostgreSQL (20s max)"
           RETRIES=10
-          until docker exec $POSTGRES_CONTAINER pg_isready -U ${{ secrets.BACKEND_POSTGRES_USER }} || [ $RETRIES -eq 0 ]; do
+          until sudo docker exec $POSTGRES_CONTAINER pg_isready -U ${{ secrets.BACKEND_POSTGRES_USER }} || [ $RETRIES -eq 0 ]; do
             echo "⏳ ..."
             sleep 2
             ((RETRIES--))
@@ -89,10 +90,10 @@ jobs:
           fi
 
           echo "🔁 Prisma Migrate Deploy"
-          docker exec $BACKEND_CONTAINER npx prisma migrate deploy
+          sudo docker exec $BACKEND_CONTAINER npx prisma migrate deploy
 
           echo "🌱 Seed initial data (Units, etc.)"
-          docker exec $BACKEND_CONTAINER npx --yes tsx prisma/seed/seed.ts
+          sudo docker exec $BACKEND_CONTAINER npx --yes tsx prisma/seed/seed.ts
 
           echo "✅ The End !!"
           EOF

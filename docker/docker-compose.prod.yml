@@ -8,12 +8,8 @@ services:
       - '5432:5432' # Mappe le port 5432 du conteneur au port 5433 de l'hôte VM
     env_file:
       - ../backend/.env.production
-    # environment:
-    #   POSTGRES_USER: ${POSTGRES_USER} # Référencera le secret GitHub Actions
-    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # Référencera le secret GitHub Actions
-    #   POSTGRES_DB: ${POSTGRES_DB} # Référencera le secret GitHub Actions
     volumes:
-      - postgres_data:/var/lib/postgresql/data # Volume persistant pour les données de la base
+      - pgdata:/var/lib/postgresql/data # Volume persistant pour les données de la base
 
   backend:
     build:
