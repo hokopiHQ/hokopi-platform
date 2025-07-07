@@ -9,7 +9,18 @@ services:
     env_file:
       - ../backend/.env.production
     volumes:
-      - pgdata:/var/lib/postgresql/data # Volume persistant pour les données de la base
+      - pgdata:/var/lib/postgresql/data
+    tmpfs: # SECURITY TEST
+      - /tmp:rw,noexec,nosuid
+      - /var/run/postgresql:rw,noexec,nosuid
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
 
   backend:
     build:
@@ -34,4 +45,4 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  pgdata:
