@@ -4,23 +4,21 @@ services:
   postgres:
     image: postgres:15
     restart: always
-    ports:
-      - '5432:5432' # Mappe le port 5432 du conteneur au port 5433 de l'hôte VM
+    # ports:
+    #   - '5432:5432' # Mappe le port 5432 du conteneur au port 5433 de l'hôte VM
     env_file:
       - ../backend/.env.production
     volumes:
       - pgdata:/var/lib/postgresql/data
-    tmpfs: # SECURITY TEST
+    # SECURITY TEST
+    user: '999:999'
+    read_only: true
+    tmpfs:
       - /tmp:rw,noexec,nosuid
       - /var/run/postgresql:rw,noexec,nosuid
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-    security_opt:
-      - no-new-privileges:true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
 
   backend:
     build:
@@ -40,6 +38,7 @@ services:
       target: prod # Utilise l'étape 'prod' de Dockerfile.frontend
     ports:
       - '80:80'
+      - '443:443'
     restart: always
     depends_on:
       - backend
