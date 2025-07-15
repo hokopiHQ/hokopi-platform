@@ -42,7 +42,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no \
               -o UserKnownHostsFile=/dev/null \
               -i ~/.ssh/id_rsa \
-              $SSH_USER@$SSH_SERVER <<'EOF'
+              $SSH_USER@$SSH_SERVER "BRANCH=${{ env.BRANCH }} bash -s" <<'EOF'
           set -e
 
           cd /var/www/app
@@ -50,11 +50,10 @@ jobs:
             echo "📥 Première installation - clonage du dépôt"
             git clone git@github.com:badelgeek/chefpocket.git .
           fi
-          git fetch origin  # recupere les modifications du depots distant
-          git reset --hard  # Réinitialise la branche actuellement HEAD (souvent 'develop' si c'est la branche par défaut)
-          git clean -fdx    # Supprime les fichiers non suivis dans le répertoire de travail
-          git checkout $BRANCH
-          git restore .
+          git fetch origin
+          git checkout -f "$BRANCH"
+          git reset --hard "origin/$BRANCH"
+          git clean -fdx
 
           echo "📦 Génération backend/.env.production"
           cat <<EOT > backend/.env.production
