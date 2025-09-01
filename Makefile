@@ -21,6 +21,9 @@ dev.db.seed:
 	docker compose -f docker/docker-compose.dev.yml exec backend npm run seed
 
 dev.db.reset:
+	docker compose -f docker/docker-compose.dev.yml exec backend sh -c "npx prisma migrate reset --force && npm run seed:dev"
+
+dev.db.reset.push:
 	docker compose -f docker/docker-compose.dev.yml exec backend sh -c "npx prisma migrate reset --force && npx prisma db push && npm run seed:dev"
 
 dev.db.generate:
