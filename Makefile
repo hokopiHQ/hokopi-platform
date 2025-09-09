@@ -32,4 +32,6 @@ dev.db.generate:
 dev.db.sh:
 	docker compose -f docker/docker-compose.dev.yml exec backend sh
 
+dev.test: 
+	cd backend && npm test
 
