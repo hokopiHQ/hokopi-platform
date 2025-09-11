@@ -68,6 +68,7 @@ jobs:
           echo "🌐 Génération frontend/.env.production"
           cat <<EOT > frontend/.env.production
           VITE_API_URL=/api
+          VITE_ENV=${{ env.ENVIRONMENT }}
           EOT
 
           echo "🚀 Docker Compose build & restart"
