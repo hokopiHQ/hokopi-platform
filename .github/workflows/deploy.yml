@@ -99,5 +99,15 @@ jobs:
           echo "🌱 Seed initial data (Units, etc.)"
           sudo docker exec $BACKEND_CONTAINER npx --yes tsx prisma/seed/seed.ts
 
+          echo "🧰 Docker Cleanup"
+          echo "-- BuildKit Cache"
+          sudo docker builder prune -f --filter until=24h
+
+          echo "-- Unused Images"
+          sudo docker image prune -f --filter until=24h --filter label!=keep
+
+          echo "📊 Available Storage"
+          df -m
+
           echo "✅ The End !!"
           EOF
