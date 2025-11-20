@@ -16,7 +16,7 @@ COPY shared/ shared
 COPY backend backend
 COPY frontend/ frontend
 WORKDIR /app/backend
-RUN npx prisma generate --generator shared
+RUN npx prisma@6.10.1 generate --generator shared
 WORKDIR /app/frontend
 RUN npm run build
 
