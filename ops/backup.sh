@@ -3,9 +3,16 @@
 # Configuration
 # ----------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${SCRIPT_DIR}/.env" ]; then
-    source "${SCRIPT_DIR}/.env"
+
+if [ ! -f "${SCRIPT_DIR}/.env" ]; then
+    echo "Error: ${SCRIPT_DIR}/.env file not found."
+    exit 1
 fi
+
+# Source .env and export variables
+set -a
+source "${SCRIPT_DIR}/.env"
+set +a
 
 # Restic Configuration
 # RESTIC_PASSWORD must be in .env or environment
