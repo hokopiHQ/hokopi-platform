@@ -1,0 +1,2 @@
+# Backup daily at 2:00 AM
+0 2 * * * /var/www/app/ops/backup.sh >> /var/log/backup.log 2>&1

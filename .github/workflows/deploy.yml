@@ -17,6 +17,13 @@ jobs:
       SSH_SERVER: ${{ vars.SSH_SERVER }}
       ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'preprod' }}
       BRANCH: ${{ vars.GITHUB_REF_NAME || github.ref_name }}
+      # Backup Config
+      BACKUP_USER: ${{ vars.BACKUP_USER }}
+      BACKUP_SERVER: ${{ vars.BACKUP_SERVER }}
+      RESTIC_PASSWORD: ${{ secrets.RESTIC_PASSWORD }}
+      BACKUP_RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS || '30' }}
+      BACKUP_RETENTION_WEEKS: ${{ vars.BACKUP_RETENTION_WEEKS || '52' }}
+      BACKUP_RETENTION_MONTHS: ${{ vars.BACKUP_RETENTION_MONTHS || '60' }}
 
     steps:
       - name: Checkout code
@@ -71,7 +78,36 @@ jobs:
           VITE_ENV=${{ env.ENVIRONMENT }}
           EOT
 
+          # 1. Generate ops/.env
+          echo "📝 Generating ops/.env..."
+          cat <<EOF > ops/.env
+          BACKUP_USER=${{ vars.BACKUP_USER }}
+          BACKUP_SERVER=${{ vars.BACKUP_SERVER }}
+          REMOTE_BASE_DIR=/${{ env.ENVIRONMENT }}
+          RESTIC_PASSWORD=${{ secrets.RESTIC_PASSWORD }}
+          BACKUP_RETENTION_DAYS=${{ vars.BACKUP_RETENTION_DAYS || '30' }}
+          BACKUP_RETENTION_WEEKS=${{ vars.BACKUP_RETENTION_WEEKS || '52' }}
+          BACKUP_RETENTION_MONTHS=${{ vars.BACKUP_RETENTION_MONTHS || '60' }}
+          EOF
+
+          # 2. Make script executable
+          chmod +x ops/backup.sh
+
+          # 3. Update Crontab (Idempotent)
+          echo "⏰ Updating Crontab..."
+          crontab ops/crontab
+
+          # 4. Run Pre-deployment Backup
+          echo "💾 Running Pre-deployment Backup..."
+          if ./ops/backup.sh; then
+            echo "::notice::✅ Backup successful"
+          else
+            echo "::error::⚠️ Backup failed!"
+            exit 1 # Uncomment to block deploy on backup failure
+          fi
+
           echo "🚀 Docker Compose build & restart"
+
           sudo docker compose -f docker/docker-compose.prod.yml down
           sudo docker compose -f docker/docker-compose.prod.yml up --build -d
 
