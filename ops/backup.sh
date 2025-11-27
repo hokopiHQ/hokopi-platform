@@ -14,9 +14,6 @@ set -a
 source "${SCRIPT_DIR}/.env"
 set +a
 
-# Restic Configuration
-# RESTIC_PASSWORD must be in .env or environment
-export RESTIC_REPOSITORY="sftp:${BACKUP_USER}@${BACKUP_SERVER}:${REMOTE_BASE_DIR}/restic-repo"
 
 # Retention Defaults
 BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
@@ -32,8 +29,8 @@ log() {
 
 # 0. Pre-flight Checks & Setup
 # ----------------------
-if [ -z "$BACKUP_USER" ] || [ -z "$BACKUP_SERVER" ] || [ -z "$REMOTE_BASE_DIR" ] || [ -z "$RESTIC_PASSWORD" ]; then
-    log "Error: BACKUP_USER, BACKUP_SERVER, REMOTE_BASE_DIR or RESTIC_PASSWORD are not set."
+if [ -z "$BACKUP_USER" ] || [ -z "$BACKUP_SERVER" ] || [ -z "$REMOTE_BASE_DIR" ] || [ -z "$RESTIC_PASSWORD" ] || [ -z "$RESTIC_REPOSITORY" ]; then
+    log "Error: BACKUP_USER, BACKUP_SERVER, REMOTE_BASE_DIR, RESTIC_REPOSITORY or RESTIC_PASSWORD are not set."
     exit 1
 fi
 
