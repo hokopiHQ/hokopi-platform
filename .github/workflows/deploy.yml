@@ -70,6 +70,11 @@ jobs:
           POSTGRES_USER=${{ secrets.BACKEND_POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.BACKEND_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.BACKEND_POSTGRES_DB }}
+          MAIL_ENABLED=${{ vars.BACKEND_MAIL_ENABLED || 'false' }}
+          APP_URL=${{ vars.BACKEND_APP_URL }}
+          MAIL_FROM=${{ vars.BACKEND_MAIL_FROM }}
+          MAIL_REPLYTO=${{ vars.BACKEND_MAIL_REPLYTO }}
+          RESEND_API_KEY=${{ secrets.BACKEND_RESEND_API_KEY }}
           EOT
 
           echo "🌐 Génération frontend/.env.production"
