@@ -19,6 +19,7 @@ set +a
 BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
 BACKUP_RETENTION_WEEKS=${BACKUP_RETENTION_WEEKS:-52}
 BACKUP_RETENTION_MONTHS=${BACKUP_RETENTION_MONTHS:-60}
+BACKUP_RETENTION_WITHIN_DAYS=${BACKUP_RETENTION_WITHIN_DAYS:-7}
 
 DOCKER_COMPOSE_FILE="/var/www/app/docker/docker-compose.prod.yml"
 
@@ -81,9 +82,10 @@ fi
 # 3. Apply Retention Policy
 # ----------------------
 log "Applying retention policy..."
-log "Keep: ${BACKUP_RETENTION_DAYS} daily, ${BACKUP_RETENTION_WEEKS} weekly, ${BACKUP_RETENTION_MONTHS} monthly."
+log "Keep: within ${BACKUP_RETENTION_WITHIN_DAYS}d, ${BACKUP_RETENTION_DAYS} daily, ${BACKUP_RETENTION_WEEKS} weekly, ${BACKUP_RETENTION_MONTHS} monthly."
 
 if restic forget \
+    --keep-within "${BACKUP_RETENTION_WITHIN_DAYS}d" \
     --keep-daily "${BACKUP_RETENTION_DAYS}" \
     --keep-weekly "${BACKUP_RETENTION_WEEKS}" \
     --keep-monthly "${BACKUP_RETENTION_MONTHS}" \
