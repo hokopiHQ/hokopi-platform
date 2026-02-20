@@ -75,12 +75,15 @@ jobs:
           MAIL_FROM=${{ vars.BACKEND_MAIL_FROM }}
           MAIL_REPLYTO=${{ vars.BACKEND_MAIL_REPLYTO }}
           RESEND_API_KEY=${{ secrets.BACKEND_RESEND_API_KEY }}
+          STRIPE_SECRET_KEY=${{ secrets.BACKEND_STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.BACKEND_STRIPE_WEBHOOK_SECRET }}
           EOT
 
           echo "🌐 Génération frontend/.env.production"
           cat <<EOT > frontend/.env.production
           VITE_API_URL=/api
           VITE_ENV=${{ env.ENVIRONMENT }}
+          VITE_STRIPE_PUBLIC_KEY=${{ vars.FRONTEND_STRIPE_PUBLIC_KEY }}
           EOT
 
           echo "📝 Generating ops/.env..."

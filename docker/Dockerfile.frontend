@@ -2,7 +2,7 @@
 FROM node:20-alpine AS base
 WORKDIR /app/frontend
 #RUN mkdir frontend
-COPY frontend/package*.json .
+COPY frontend/package*.json ./
 RUN npm install
 
 # Étape de développement (hot reload)

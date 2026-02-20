@@ -1,7 +1,7 @@
 # Étape base
 FROM node:20-alpine AS base
 WORKDIR /app/backend
-COPY backend/package*.json .
+COPY backend/package*.json ./
 RUN npm install
 
 # Étape dev
