@@ -1,0 +1,22 @@
+dev.chefpocket.com {
+	encode zstd gzip
+
+	# Reproduit le comportement Nginx actuel:
+	# /api/foo -> backend reçoit /foo (prefixe /api retiré)
+	handle /api {
+		redir /api/ 308
+	}
+	handle_path /api/* {
+		reverse_proxy backend:3000
+	}
+
+	# Frontend SPA
+	root * /usr/share/caddy
+	try_files {path} /index.html
+	file_server
+
+	log {
+		output stdout
+		format console
+	}
+}
