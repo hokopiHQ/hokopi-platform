@@ -1,4 +1,4 @@
-dev.chefpocket.com {
+dev.chefpocket.com, beta.hokopi.com {
 	encode zstd gzip
 
 	route {
