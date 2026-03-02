@@ -54,15 +54,15 @@ jobs:
 
           cd /var/www/app
           if [ ! -d .git ]; then
-            echo "📥 Première installation - clonage du dépôt"
-            git clone git@github.com:badelgeek/chefpocket.git .
+            echo "📥 First installation - cloning repository"
+            git clone git@github.com:hokopiHQ/hokopi-webapp.git .
           fi
           git fetch origin
           git checkout -f "$BRANCH"
           git reset --hard "origin/$BRANCH"
           git clean -fdx
 
-          echo "📦 Génération backend/.env.production"
+          echo "📦 Generating backend/.env.production"
           cat <<EOT > backend/.env.production
           NODE_ENV=production
           JWT_SECRET=${{ secrets.BACKEND_JWT_SECRET }}
@@ -71,7 +71,7 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.BACKEND_POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.BACKEND_POSTGRES_DB }}
           MAIL_ENABLED=${{ vars.BACKEND_MAIL_ENABLED || 'false' }}
-          APP_URL=${{ vars.BACKEND_APP_URL }}
+          APP_URL=${{ vars.APP_URL }}
           MAIL_FROM=${{ vars.BACKEND_MAIL_FROM }}
           MAIL_REPLYTO=${{ vars.BACKEND_MAIL_REPLYTO }}
           RESEND_API_KEY=${{ secrets.BACKEND_RESEND_API_KEY }}
@@ -79,7 +79,7 @@ jobs:
           STRIPE_WEBHOOK_SECRET=${{ secrets.BACKEND_STRIPE_WEBHOOK_SECRET }}
           EOT
 
-          echo "🌐 Génération frontend/.env.production"
+          echo "🌐 Generating frontend/.env.production"
           cat <<EOT > frontend/.env.production
           VITE_API_URL=/api
           VITE_ENV=${{ env.ENVIRONMENT }}
