@@ -1,4 +1,13 @@
-dev.chefpocket.com, beta.hokopi.com {
+dev.chefpocket.com {
+	redir https://beta.hokopi.com{uri} 301
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+beta.hokopi.com {
 	encode zstd gzip
 
 	route {
