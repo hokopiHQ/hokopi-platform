@@ -4,8 +4,8 @@ services:
   postgres:
     image: postgres:15
     restart: always
-    # ports:
-    #   - '5432:5432' # Mappe le port 5432 du conteneur au port 5433 de l'hôte VM
+    ports:
+      - '127.0.0.1:5432:5432' # Expose PostgreSQL only on localhost
     env_file:
       - ../backend/.env.production
     volumes:
