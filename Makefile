@@ -58,6 +58,7 @@ endef
 	stop \
 	back.start \
 	back.reset \
+	ocr.health \
 	db.migrate \
 	db.seed \
 	db.reset \
@@ -72,6 +73,7 @@ endef
 	dev.stop \
 	dev.back.start \
 	dev.back.reset \
+	dev.ocr.health \
 	dev.db.migrate \
 	dev.db.seed \
 	dev.db.reset \
@@ -97,6 +99,7 @@ help:
 	@echo "  make start"
 	@echo "  make stop"
 	@echo "  make back.start"
+	@echo "  make ocr.health"
 	@echo "  make db.generate"
 	@echo "  make db.sh"
 	@echo "  make db.psql"
@@ -123,12 +126,15 @@ stop:
 	$(COMPOSE) down
 
 back.start:
-	$(COMPOSE) up backend
+	$(COMPOSE) up backend ocr
 
 back.reset:
 	$(call require-dev)
 	$(COMPOSE) rm -fs backend
 	$(COMPOSE) up --build --no-deps backend
+
+ocr.health:
+	$(BACKEND_EXEC) wget -qO- http://ocr:8000/health
 
 db.migrate:
 	$(call require-dev)
@@ -193,6 +199,7 @@ dev.start: start
 dev.stop: stop
 dev.back.start: back.start
 dev.back.reset: back.reset
+dev.ocr.health: ocr.health
 dev.db.migrate: db.migrate
 dev.db.seed: db.seed
 dev.db.reset: db.reset

@@ -27,9 +27,21 @@ services:
       target: prod # Utilise l'étape 'prod' de Dockerfile.backend
     depends_on:
       - postgres
+      - ocr
     env_file:
       - ../backend/.env.production
+    environment:
+      OCR_BASE_URL: http://ocr:8000
     restart: always
+
+  ocr:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ocr
+      target: prod
+    restart: always
+    expose:
+      - '8000'
 
   frontend:
     build:
