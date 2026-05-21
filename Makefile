@@ -42,6 +42,10 @@ COMPOSE := docker compose -f $(COMPOSE_FILE)
 BACKEND_EXEC := $(COMPOSE) exec backend
 BACKEND_EXEC_T := $(COMPOSE) exec -T backend
 
+export OCR_PROVIDER
+export OCR_PRELOAD_MODELS
+export OCR_LOG_WORD_SCORES
+
 define require-dev
 	@if [ "$(ACTIVE_ENV)" != "dev" ]; then \
 		echo "Target '$@' is only allowed with ENV=dev (current: $(ACTIVE_ENV))."; \
@@ -58,6 +62,8 @@ endef
 	stop \
 	back.start \
 	back.reset \
+	ocr.start \
+	ocr.rebuild \
 	ocr.health \
 	db.migrate \
 	db.seed \
@@ -73,6 +79,8 @@ endef
 	dev.stop \
 	dev.back.start \
 	dev.back.reset \
+	dev.ocr.start \
+	dev.ocr.rebuild \
 	dev.ocr.health \
 	dev.db.migrate \
 	dev.db.seed \
@@ -99,6 +107,8 @@ help:
 	@echo "  make start"
 	@echo "  make stop"
 	@echo "  make back.start"
+	@echo "  make ocr.start"
+	@echo "  make ocr.rebuild"
 	@echo "  make ocr.health"
 	@echo "  make db.generate"
 	@echo "  make db.sh"
@@ -126,7 +136,13 @@ stop:
 	$(COMPOSE) down
 
 back.start:
-	$(COMPOSE) up backend ocr
+	$(COMPOSE) up backend
+
+ocr.start:
+	$(COMPOSE) up ocr
+
+ocr.rebuild:
+	$(COMPOSE) up -d --build --force-recreate ocr
 
 back.reset:
 	$(call require-dev)
@@ -134,7 +150,7 @@ back.reset:
 	$(COMPOSE) up --build --no-deps backend
 
 ocr.health:
-	$(BACKEND_EXEC) wget -qO- http://ocr:8000/health
+	$(COMPOSE) exec ocr python -c 'import urllib.request; print(urllib.request.urlopen("http://localhost:8000/health").read().decode())'
 
 db.migrate:
 	$(call require-dev)
@@ -199,6 +215,8 @@ dev.start: start
 dev.stop: stop
 dev.back.start: back.start
 dev.back.reset: back.reset
+dev.ocr.start: ocr.start
+dev.ocr.rebuild: ocr.rebuild
 dev.ocr.health: ocr.health
 dev.db.migrate: db.migrate
 dev.db.seed: db.seed

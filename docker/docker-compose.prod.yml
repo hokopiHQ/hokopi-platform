@@ -27,21 +27,34 @@ services:
       target: prod # Utilise l'étape 'prod' de Dockerfile.backend
     depends_on:
       - postgres
-      - ocr
     env_file:
       - ../backend/.env.production
     environment:
       OCR_BASE_URL: http://ocr:8000
+      OCR_TIMEOUT_MS: '90000'
     restart: always
 
   ocr:
     build:
       context: ..
       dockerfile: docker/Dockerfile.ocr
-      target: prod
+      target: ${OCR_PROVIDER:-doctr}
+    environment:
+      OCR_PRELOAD_MODELS: ${OCR_PRELOAD_MODELS:-true}
+      OCR_LOG_WORD_SCORES: ${OCR_LOG_WORD_SCORES:-false}
+      MALLOC_ARENA_MAX: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      TORCH_DEVICE: cpu
+      RECOGNITION_BATCH_SIZE: '4'
+      DETECTOR_BATCH_SIZE: '1'
     restart: always
+    mem_limit: 1800m
+    memswap_limit: 1800m
     expose:
       - '8000'
+    volumes:
+      - ocr_model_cache:/root/.cache
 
   frontend:
     build:
@@ -59,3 +72,4 @@ services:
 
 volumes:
   pgdata:
+  ocr_model_cache:

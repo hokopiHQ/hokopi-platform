@@ -1,10 +1,11 @@
-FROM python:3.11-slim AS prod
+# syntax=docker/dockerfile:1.7
+
+FROM python:3.11-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PYTHONUNBUFFERED=1
 
-WORKDIR /app/ocrService
+WORKDIR /app/services/ocr
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -14,10 +15,27 @@ RUN apt-get update \
       poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY ocrService/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+FROM base AS doctr
 
-COPY ocrService/ ./
+COPY services/ocr/doctr/requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY services/ocr/doctr/ ./
+COPY services/ocr/common/ ./
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+FROM doctr AS prod
+
+FROM base AS easyocr
+
+COPY services/ocr/easyocr/requirements.txt ./
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
+
+COPY services/ocr/easyocr/ ./
+COPY services/ocr/common/ ./
 
 EXPOSE 8000
 

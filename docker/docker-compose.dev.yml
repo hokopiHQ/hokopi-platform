@@ -25,12 +25,12 @@ services:
       - '5001:3000'
     depends_on:
       - postgres
-      - ocr
     # environment:
     #   - NODE_ENV=development
     # - DATABASE_URL=postgresql://postgres:postgres@postgres:5433/db
     environment:
       OCR_BASE_URL: http://ocr:8000
+      OCR_TIMEOUT_MS: '90000'
     env_file:
       - ../backend/.env.development
 
@@ -38,10 +38,23 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.ocr
-      target: prod
+      target: ${OCR_PROVIDER:-doctr}
+    environment:
+      OCR_PRELOAD_MODELS: ${OCR_PRELOAD_MODELS:-true}
+      OCR_LOG_WORD_SCORES: ${OCR_LOG_WORD_SCORES:-true}
+      MALLOC_ARENA_MAX: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      TORCH_DEVICE: cpu
+      RECOGNITION_BATCH_SIZE: '4'
+      DETECTOR_BATCH_SIZE: '1'
     restart: always
+    mem_limit: 1800m
+    memswap_limit: 1800m
     expose:
       - '8000'
+    volumes:
+      - ocr_model_cache:/root/.cache
 
   frontend:
     build:
@@ -57,3 +70,4 @@ services:
     command: npm run dev
 volumes:
   postgres_data:
+  ocr_model_cache:
