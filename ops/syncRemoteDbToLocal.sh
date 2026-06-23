@@ -30,7 +30,7 @@ Environment overrides:
   IMPORT_SQL_PATH                       (default: alongside dump path)
   SANITIZE_SQL_PATH                     (default: alongside dump path)
   KEEP_DUMP             0|1             (default: 0, forced to 1 with --dump-only)
-  LOCAL_PASSWORD_HASH                   (default: user A hash from prisma/seed/seed.dev.ts)
+  LOCAL_PASSWORD_HASH                   (default: Argon2id hash for "aaaaaa")
 
 Behavior:
   - dry-run is the default
@@ -91,7 +91,7 @@ DUMP_PATH="${DUMP_PATH:-}"
 IMPORT_SQL_PATH="${IMPORT_SQL_PATH:-}"
 SANITIZE_SQL_PATH="${SANITIZE_SQL_PATH:-}"
 KEEP_DUMP="${KEEP_DUMP:-0}"
-LOCAL_PASSWORD_HASH="${LOCAL_PASSWORD_HASH:-b5d8d35a3fa3ed9a0a7118755b684186:613dd87b1fb8ea1dbc4beb6e87086fac94f24dd543c83724bd8b1478bcbc3c68}"
+LOCAL_PASSWORD_HASH="${LOCAL_PASSWORD_HASH:-\$argon2id\$v=19\$m=19456,t=2,p=1\$WeE+Cl9VFxUdRJbiOR3ycg\$EDps9DOAipnbVqSBvQUHzIHNHZ9n59/2Zfbk56sSSDo}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BACKEND_DIR="${REPO_ROOT}/backend"
@@ -245,12 +245,50 @@ normalize_import_dump() {
   local source_path="$1"
   local target_path="$2"
 
-  awk '
+  {
+    cat <<'SQL'
+BEGIN;
+SET LOCAL session_replication_role = replica;
+SQL
+
+    awk '
     BEGIN {
       in_user_copy = 0
+      in_unit_copy = 0
+      in_pack_type_copy = 0
+
+      bootstrap_pack_types["BIN"] = 1
+      bootstrap_pack_types["BLOCK"] = 1
+      bootstrap_pack_types["BOTTLE"] = 1
+      bootstrap_pack_types["BRICK"] = 1
+      bootstrap_pack_types["BOX"] = 1
+      bootstrap_pack_types["BUCKET"] = 1
+      bootstrap_pack_types["CAN"] = 1
+      bootstrap_pack_types["CANISTER"] = 1
+      bootstrap_pack_types["CARTON"] = 1
+      bootstrap_pack_types["CRATE"] = 1
+      bootstrap_pack_types["CASE"] = 1
+      bootstrap_pack_types["JAR"] = 1
+      bootstrap_pack_types["MULTIPACK"] = 1
+      bootstrap_pack_types["NET"] = 1
+      bootstrap_pack_types["PALLET"] = 1
+      bootstrap_pack_types["POUCH"] = 1
+      bootstrap_pack_types["BAG"] = 1
+      bootstrap_pack_types["TRAY"] = 1
+      bootstrap_pack_types["UNIT"] = 1
     }
     /^COPY public\."User" \(.*\) FROM stdin;$/ || /^COPY "User" \(.*\) FROM stdin;$/ {
       in_user_copy = 1
+      print
+      next
+    }
+    /^COPY public\."Unit" \(.*\) FROM stdin;$/ || /^COPY "Unit" \(.*\) FROM stdin;$/ {
+      in_unit_copy = 1
+      print
+      next
+    }
+    /^COPY public\."MercurialePackType" \(.*\) FROM stdin;$/ || /^COPY "MercurialePackType" \(.*\) FROM stdin;$/ {
+      in_pack_type_copy = 1
       print
       next
     }
@@ -259,13 +297,62 @@ normalize_import_dump() {
       print
       next
     }
+    in_unit_copy && $0 == "\\." {
+      in_unit_copy = 0
+      print
+      next
+    }
+    in_pack_type_copy && $0 == "\\." {
+      in_pack_type_copy = 0
+      print
+      next
+    }
     in_user_copy && $1 == "00000000-0000-0000-0000-000000000001" && $2 == "system@local" {
+      next
+    }
+    in_unit_copy && ($1 == "uu" || $1 == "uc") {
+      next
+    }
+    in_pack_type_copy && bootstrap_pack_types[$1] {
       next
     }
     {
       print
     }
-  ' "${source_path}" > "${target_path}"
+    ' "${source_path}"
+
+    cat <<'SQL'
+SET LOCAL session_replication_role = origin;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public."MercurialeItem" item
+    LEFT JOIN public."MercurialeItemNode" node
+      ON node."id" = item."pricingNodeId"
+      AND node."mercurialeItemId" = item."id"
+    WHERE item."pricingNodeId" IS NOT NULL
+      AND node."id" IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Imported MercurialeItem pricing nodes are inconsistent';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public."MercurialeItemNode" node
+    LEFT JOIN public."MercurialeItem" item
+      ON item."id" = node."mercurialeItemId"
+    WHERE item."id" IS NULL
+  ) THEN
+    RAISE EXCEPTION 'Imported MercurialeItemNode rows contain orphan items';
+  END IF;
+END
+$$;
+
+COMMIT;
+SQL
+  } > "${target_path}"
 }
 
 write_local_sanitization_sql() {
@@ -457,6 +544,10 @@ if [[ "${EXECUTE}" != "1" ]]; then
     echo
     echo "Import dump normalization:"
     echo "  - Section A: remove the bootstrap system user row already created by local migrations"
+    echo "  - Section B: remove bootstrap units uu/uc already created by local migrations"
+    echo "  - Section C: remove initial pack types already created by local migrations"
+    echo "  - Section D: restore inside one transaction with FK triggers temporarily disabled"
+    echo "  - Section E: validate MercurialeItem pricing-node integrity before commit"
     echo
     echo "Local import command:"
     printf "  %s < %q\n" "${LOCAL_IMPORT_COMMAND}" "${IMPORT_SQL_PATH}"
@@ -560,7 +651,7 @@ else
   exit 1
 fi
 
-print_info "Normalizing import dump for local bootstrap rows"
+print_info "Normalizing import dump for bootstrap rows and cyclic foreign keys"
 if normalize_import_dump "${DUMP_PATH}" "${IMPORT_SQL_PATH}" 2>"${DUMP_PATH}.stderr"; then
   if command -v rg >/dev/null 2>&1; then
     if rg -n '^00000000-0000-0000-0000-000000000001\tsystem@local\t' "${IMPORT_SQL_PATH}" >/dev/null; then
