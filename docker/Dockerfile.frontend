@@ -1,9 +1,12 @@
 # Étape de base commune
-FROM node:20-alpine AS base
+FROM node:24.18.0-bookworm-slim AS base
 WORKDIR /app/frontend
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 #RUN mkdir frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 
 # Étape de développement (hot reload)
 FROM base AS dev
