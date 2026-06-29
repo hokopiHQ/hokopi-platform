@@ -103,6 +103,27 @@ jobs:
           echo "⏰ Updating Crontab..."
           crontab ops/crontab
 
+          echo "🕒 Ensuring PostgreSQL is available for backup"
+          sudo docker compose -f docker/docker-compose.prod.yml up -d postgres
+
+          POSTGRES_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q postgres)
+          if [ -z "$POSTGRES_CONTAINER" ]; then
+            echo "::error::❌ PostgreSQL container is not available for backup"
+            exit 1
+          fi
+
+          RETRIES=10
+          until sudo docker exec $POSTGRES_CONTAINER pg_isready -U ${{ secrets.BACKEND_POSTGRES_USER }} || [ $RETRIES -eq 0 ]; do
+            echo "⏳ Waiting PostgreSQL before backup..."
+            sleep 2
+            ((RETRIES--))
+          done
+
+          if [ $RETRIES -eq 0 ]; then
+            echo "::error::❌ PostgreSQL is not ready for backup"
+            exit 1
+          fi
+
           echo "💾 Running Pre-deployment Backup..."
           if ./ops/backup.sh; then
             echo "::notice::✅ Backup successful"

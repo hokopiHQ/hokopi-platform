@@ -32,6 +32,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/backend/dist ./dist
 COPY backend/prisma ./prisma
+COPY backend/prisma.config.ts ./
 COPY backend/src ./src
 COPY backend/tsconfig*.json ./
 COPY backend/package*.json ./
