@@ -9,7 +9,7 @@ RUN npm ci
 
 # Étape dev
 FROM base AS dev
-CMD ["sh", "-c", "npm run prisma:generate && npx prisma db push && npm run start:dev"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push && npm run start:dev"]
 
 # Étape build
 FROM base AS build
@@ -17,7 +17,12 @@ WORKDIR /app
 COPY shared shared
 COPY backend/ backend
 WORKDIR /app/backend
-RUN npx prisma generate 
+RUN set -a \
+    && if [ -f .env.production ]; then \
+        . ./.env.production; \
+    fi \
+    && set +a \
+    && npx prisma generate
 RUN npm run build
 
 # Étape prod
@@ -28,7 +33,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/backend/dist ./dist
 COPY backend/prisma ./prisma
-COPY backend/package*.json ./   
+COPY backend/src ./src
+COPY backend/tsconfig*.json ./
+COPY backend/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/backend/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/backend/node_modules/@prisma ./node_modules/@prisma
