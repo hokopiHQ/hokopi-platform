@@ -17,12 +17,11 @@ WORKDIR /app
 COPY shared shared
 COPY backend/ backend
 WORKDIR /app/backend
-RUN set -a \
-    && if [ -f .env.production ]; then \
-        . ./.env.production; \
-    fi \
-    && set +a \
-    && npx prisma generate
+RUN if [ -f .env.production ]; then \
+        NODE_ENV=production npx prisma generate; \
+    else \
+        npx prisma generate; \
+    fi
 RUN npm run build
 
 # Étape prod

@@ -20,12 +20,11 @@ COPY backend backend
 COPY frontend/ frontend
 WORKDIR /app/backend
 RUN npm ci
-RUN set -a \
-    && if [ -f .env.production ]; then \
-        . ./.env.production; \
-    fi \
-    && set +a \
-    && npx prisma generate --generator shared
+RUN if [ -f .env.production ]; then \
+        NODE_ENV=production npx prisma generate --generator shared; \
+    else \
+        npx prisma generate --generator shared; \
+    fi
 WORKDIR /app/frontend
 RUN npm run build
 
