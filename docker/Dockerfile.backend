@@ -9,7 +9,7 @@ RUN npm ci
 
 # Étape dev
 FROM base AS dev
-CMD ["sh", "-c", "npx prisma db push && npm run start:dev"]
+CMD ["sh", "-c", "npm run prisma:generate && npx prisma db push && npm run start:dev"]
 
 # Étape build
 FROM base AS build
