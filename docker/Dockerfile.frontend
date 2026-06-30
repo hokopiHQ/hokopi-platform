@@ -18,6 +18,7 @@ WORKDIR /app
 COPY shared/ shared
 COPY backend backend
 COPY frontend/ frontend
+COPY website/ website
 WORKDIR /app/backend
 RUN npm ci
 RUN if [ -f .env.production ]; then \
@@ -27,15 +28,12 @@ RUN if [ -f .env.production ]; then \
     fi
 WORKDIR /app/frontend
 RUN npm run build
+WORKDIR /app/website
+RUN npm ci
+RUN npm run build
 
 # Production Step (caddy TLS + reverse proxy)
 FROM caddy:2-alpine AS prod
 COPY docker/Caddyfile /etc/caddy/Caddyfile
-COPY --from=build /app/frontend/dist /usr/share/caddy
-
-# Étape de production (serveur nginx)
-# FROM nginx:alpine AS prod
-# COPY --from=build /app/frontend/dist /usr/share/nginx/html
-# COPY docker/nginx.conf /etc/nginx/nginx.conf
-# EXPOSE 80
-# CMD ["nginx", "-g", "daemon off;"]
+COPY --from=build /app/frontend/dist /usr/share/caddy/webapp
+COPY --from=build /app/website/dist /usr/share/caddy/website

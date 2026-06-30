@@ -17,6 +17,8 @@ jobs:
       SSH_SERVER: ${{ vars.SSH_SERVER }}
       ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'preprod' }}
       BRANCH: ${{ vars.GITHUB_REF_NAME || github.ref_name }}
+      WEBSITE_NOINDEX: ${{ vars.WEBSITE_NOINDEX || 'true' }}
+      WEBSITE_URL: ${{ vars.WEBSITE_URL || (github.ref == 'refs/heads/main' && 'https://hokopi.com' || 'https://beta.hokopi.com') }}
       # Backup Config
       BACKUP_USER: ${{ vars.BACKUP_USER }}
       BACKUP_SERVER: ${{ vars.BACKUP_SERVER }}
@@ -84,6 +86,13 @@ jobs:
           VITE_API_URL=/api
           VITE_ENV=${{ env.ENVIRONMENT }}
           VITE_STRIPE_PUBLIC_KEY=${{ vars.FRONTEND_STRIPE_PUBLIC_KEY }}
+          EOT
+
+          echo "🌍 Generating website/.env.production"
+          cat <<EOT > website/.env.production
+          PUBLIC_APP_URL=${{ vars.APP_URL }}
+          PUBLIC_SITE_URL=${{ env.WEBSITE_URL }}
+          PUBLIC_NOINDEX=${{ env.WEBSITE_NOINDEX }}
           EOT
 
           echo "📝 Generating ops/.env..."

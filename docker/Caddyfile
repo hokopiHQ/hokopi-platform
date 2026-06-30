@@ -1,13 +1,18 @@
-dev.chefpocket.com {
-	redir https://beta.hokopi.com{uri} 301
-
+(common_log) {
 	log {
 		output stdout
 		format console
 	}
 }
 
-beta.hokopi.com {
+(website_static) {
+	encode zstd gzip
+	root * /usr/share/caddy/website
+	try_files {path} {path}/ =404
+	file_server
+}
+
+(webapp_static) {
 	encode zstd gzip
 
 	route {
@@ -18,14 +23,40 @@ beta.hokopi.com {
 		}
 
 		handle {
-			root * /usr/share/caddy
+			root * /usr/share/caddy/webapp
 			try_files {path} /index.html
 			file_server
 		}
 	}
+}
 
-	log {
-		output stdout
-		format console
-	}
+dev.chefpocket.com {
+	redir https://beta.hokopi.com{uri} 301
+	import common_log
+}
+
+www.hokopi.com {
+	redir https://hokopi.com{uri} 301
+	import common_log
+}
+
+hokopi.com {
+	import website_static
+	import common_log
+}
+
+beta.hokopi.com {
+	header X-Robots-Tag "noindex, nofollow"
+	import website_static
+	import common_log
+}
+
+app.hokopi.com {
+	import webapp_static
+	import common_log
+}
+
+app.beta.hokopi.com {
+	import webapp_static
+	import common_log
 }
