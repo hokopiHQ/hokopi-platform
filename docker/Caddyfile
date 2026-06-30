@@ -47,6 +47,16 @@ hokopi.com {
 
 beta.hokopi.com {
 	header X-Robots-Tag "noindex, nofollow"
+	header Clear-Site-Data "\"cache\", \"storage\""
+
+	@legacy_app_routes path /login* /register* /forgot-password* /reset-password* /invitation* /subscription*
+	redir @legacy_app_routes https://app.beta.hokopi.com{uri} 302
+
+	@website_html path / /en/ /index.html /en/index.html
+	header @website_html Cache-Control "no-cache, no-store, must-revalidate"
+	header @website_html Pragma "no-cache"
+	header @website_html Expires "0"
+
 	import website_static
 	import common_log
 }
