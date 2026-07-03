@@ -18,7 +18,7 @@ services:
       - /var/run/postgresql:rw,noexec,nosuid
     cap_drop: [ALL]
     cap_add: [CHOWN, SETGID, SETUID]
-    security_opt: [no-new-privileges:true]
+    security_opt: ['no-new-privileges:true']
 
   backend:
     build:
@@ -65,7 +65,8 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - caddy_data:/data
+      - caddy_config:/config
     restart: always
     depends_on:
       - backend
@@ -73,3 +74,5 @@ services:
 volumes:
   pgdata:
   ocr_model_cache:
+  caddy_data:
+  caddy_config:

@@ -101,7 +101,7 @@ jobs:
           BACKUP_SERVER=${{ vars.BACKUP_SERVER }}
           REMOTE_BASE_DIR=/${{ env.ENVIRONMENT }}
           RESTIC_PASSWORD=${{ secrets.RESTIC_PASSWORD }}
-          RESTIC_REPOSITORY=sftp:${{ vars.BACKUP_USER }}@${{ vars.BACKUP_SERVER }}:/${{ env.ENVIRONMENT }}/restic-repo
+          RESTIC_REPOSITORY=sftp://${{ vars.BACKUP_USER }}@${{ vars.BACKUP_SERVER }}:23/${{ env.ENVIRONMENT }}/restic-repo
           BACKUP_RETENTION_DAYS=${{ vars.BACKUP_RETENTION_DAYS || '30' }}
           BACKUP_RETENTION_WEEKS=${{ vars.BACKUP_RETENTION_WEEKS || '52' }}
           BACKUP_RETENTION_MONTHS=${{ vars.BACKUP_RETENTION_MONTHS || '60' }}
