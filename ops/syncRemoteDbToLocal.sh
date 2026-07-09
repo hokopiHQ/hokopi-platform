@@ -226,7 +226,7 @@ build_local_import_command() {
 
 build_local_prisma_reset_command() {
   local shell_command
-  printf -v shell_command 'cd %q && %q migrate reset --force --skip-seed --schema prisma/schema.prisma' \
+  printf -v shell_command 'cd %q && %q migrate reset --force --schema prisma/schema.prisma' \
     "${BACKEND_DIR}" "${PRISMA_BIN}"
   printf "%q " bash -lc "${shell_command}"
 }
@@ -527,7 +527,7 @@ if [[ "${EXECUTE}" != "1" ]]; then
     echo "  Action     : keep local dump only"
   else
     echo "  Import SQL : ${IMPORT_SQL_PATH}"
-    echo "  Reset      : prisma migrate reset --force --skip-seed"
+    echo "  Reset      : prisma migrate reset --force"
     echo "  DB service : ${LOCAL_DB_SERVICE}"
     echo "  DB name    : ${LOCAL_DB_NAME:-unknown}"
     echo "  Overwrite  : import prod-like data into schema rebuilt from local migrations"
@@ -599,7 +599,7 @@ else
   echo "Target"
   echo "  Host       : ${LOCAL_HOSTNAME:-unknown}"
   echo "  Import SQL : ${IMPORT_SQL_PATH}"
-  echo "  Reset      : prisma migrate reset --force --skip-seed"
+  echo "  Reset      : prisma migrate reset --force"
   echo "  DB service : ${LOCAL_DB_SERVICE}"
   echo "  DB name    : ${LOCAL_DB_NAME:-unknown}"
   echo "  Overwrite  : import prod-like data into schema rebuilt from local migrations"
