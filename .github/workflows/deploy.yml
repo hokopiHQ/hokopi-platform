@@ -79,6 +79,11 @@ jobs:
           RESEND_API_KEY=${{ secrets.BACKEND_RESEND_API_KEY }}
           STRIPE_SECRET_KEY=${{ secrets.BACKEND_STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET=${{ secrets.BACKEND_STRIPE_WEBHOOK_SECRET }}
+          AI_ANALYTICS_PROVIDER=${{ vars.AI_ANALYTICS_PROVIDER || 'groq' }}
+          AI_ANALYTICS_MODEL=${{ vars.AI_ANALYTICS_MODEL }}
+          AI_OPENROUTER_API_KEY=${{ secrets.AI_OPENROUTER_API_KEY }}
+          AI_OPENROUTER_PROVIDER=${{ vars.AI_OPENROUTER_PROVIDER }}
+          AI_GROQ_API_KEY=${{ secrets.AI_GROQ_API_KEY }}
           EOT
 
           echo "🌐 Generating frontend/.env.production"
