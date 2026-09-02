@@ -2,6 +2,9 @@ name: Publish Platform Mirror
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -17,7 +20,7 @@ jobs:
         shell: bash
         run: |
           case "$SOURCE_BRANCH" in
-            main|develop|ops/platformPublish)
+            main|develop)
               echo "Authorized source: $SOURCE_BRANCH"
               ;;
             *)
@@ -31,6 +34,38 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Install Gitleaks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/gitleaks"
 
-      - name: Bootstrap publisher
-        run: bash ops/scripts/publish-platform-mirror.sh
+          gh release download \
+            --repo gitleaks/gitleaks \
+            --pattern 'gitleaks_*_linux_x64.tar.gz' \
+            --dir "$RUNNER_TEMP/gitleaks"
+
+          tar -xzf "$RUNNER_TEMP"/gitleaks/*.tar.gz \
+            -C "$RUNNER_TEMP/gitleaks" gitleaks
+
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+
+      - name: Install git-filter-repo
+        run: pipx install git-filter-repo
+
+      - name: Prepare Platform mirror
+        run: bash ops/publish-platform-mirror.sh prepare
+
+      - name: Generate Platform Publisher token
+        id: platform-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.GHAPP_PLATFORM_PUBLISHER_CLIENT_ID }}
+          private-key: ${{ secrets.GHAPP_PLATFORM_PUBLISHER_PRIVATE_KEY }}
+          owner: hokopiHQ
+          repositories: hokopi-platform
+
+      - name: Publish Platform mirror
+        env:
+          PLATFORM_TOKEN: ${{ steps.platform-token.outputs.token }}
+        run: bash ops/publish-platform-mirror.sh publish
