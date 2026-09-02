@@ -1,0 +1,36 @@
+name: Publish Platform Mirror
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish-platform:
+    name: Publish Platform Mirror
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authorize source branch
+        env:
+          SOURCE_BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          case "$SOURCE_BRANCH" in
+            main|develop|ops/platformPublish)
+              echo "Authorized source: $SOURCE_BRANCH"
+              ;;
+            *)
+              echo "::error::Unauthorized source branch: $SOURCE_BRANCH"
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bootstrap publisher
+        run: bash ops/scripts/publish-platform-mirror.sh
