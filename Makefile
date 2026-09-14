@@ -9,7 +9,11 @@ AUTO_ENV := $(strip $(shell \
 		if [ ! -f "$$compose_file" ]; then \
 			continue; \
 		fi; \
-		container_id="$$(docker compose -f "$$compose_file" ps -q backend 2>/dev/null)"; \
+		compose_env_file=""; \
+		if [ "$$env" = "prod" ]; then \
+			compose_env_file="--env-file docker/.env"; \
+		fi; \
+		container_id="$$(docker compose $$compose_env_file -f "$$compose_file" ps -q backend 2>/dev/null)"; \
 		if [ -n "$$container_id" ]; then \
 			if [ -n "$$found" ]; then \
 				echo dev; \
@@ -38,7 +42,11 @@ $(error Unsupported ENV '$(ACTIVE_ENV)'. Expected one of: $(KNOWN_ENVS))
 endif
 
 COMPOSE_FILE := docker/docker-compose.$(ACTIVE_ENV).yml
-COMPOSE := docker compose -f $(COMPOSE_FILE)
+COMPOSE_ENV_FILE :=
+ifeq ($(ACTIVE_ENV),prod)
+COMPOSE_ENV_FILE := --env-file docker/.env
+endif
+COMPOSE := docker compose $(COMPOSE_ENV_FILE) -f $(COMPOSE_FILE)
 BACKEND_EXEC := $(COMPOSE) exec backend
 BACKEND_EXEC_T := $(COMPOSE) exec -T backend
 
@@ -98,6 +106,7 @@ env: show-env
 show-env:
 	@echo "ENV=$(ACTIVE_ENV)"
 	@echo "COMPOSE_FILE=$(COMPOSE_FILE)"
+	@echo "COMPOSE_ENV_FILE=$(COMPOSE_ENV_FILE)"
 
 help:
 	@echo ""

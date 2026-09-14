@@ -1,0 +1,21 @@
+# Base step
+FROM node:24.18.0-bookworm-slim AS base
+WORKDIR /app
+COPY shared/ shared
+COPY website/ website
+WORKDIR /app/website
+RUN npm ci
+
+# Development (hot reload)
+FROM base AS dev
+CMD ["npm", "run", "dev"]
+
+# Build step
+FROM base AS build
+WORKDIR /app/website
+RUN npm run build
+
+# HTTP Serve step prod
+FROM nginx:1-alpine-slim as prod
+COPY docker/nginx.website.conf /etc/nginx/nginx.conf
+COPY --from=build /app/website/dist /usr/share/nginx/html

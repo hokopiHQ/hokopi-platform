@@ -33,6 +33,13 @@ services:
       OCR_TIMEOUT_MS: '90000'
     env_file:
       - ../backend/.env.development
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend-local.rule=Host(`app.hokopi.local`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend-local.entrypoints=web
+      - traefik.http.routers.backend-local.middlewares=backend-api-prefix-local
+      - traefik.http.middlewares.backend-api-prefix-local.stripprefix.prefixes=/api
+      - traefik.http.services.backend-local.loadbalancer.server.port=3000
 
   ocr:
     build:
@@ -59,7 +66,7 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.frontend
+      dockerfile: docker/Dockerfile.webapp
       target: dev
     volumes:
       - ../frontend:/app/frontend
@@ -68,6 +75,40 @@ services:
     ports:
       - '8080:8080'
     command: npm run dev
+
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.webapp-local.rule=Host(`app.hokopi.local`)
+      - traefik.http.routers.webapp-local.entrypoints=web
+      - traefik.http.services.webapp-local.loadbalancer.server.port=8080
+
+  website:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.website
+      target: dev
+    volumes:
+      - ../website:/app/website
+      - ../shared:/app/shared
+      - /app/website/node_modules
+    command: npm run dev -- --host 0.0.0.0
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.website-local.rule=Host(`hokopi.local`)
+      - traefik.http.routers.website-local.entrypoints=web
+      - traefik.http.services.website-local.loadbalancer.server.port=8081
+
+  traefik:
+    image: traefik:3.7
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - '80:80'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 volumes:
   postgres_data:
   ocr_model_cache:

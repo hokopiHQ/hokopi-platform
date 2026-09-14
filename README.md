@@ -23,11 +23,11 @@ flowchart TB
     USER["Users / Internet"]
 
     subgraph GITHUB["GitHub"]
-        WEBAPP["🔒 hokopi-webapp<br/>Private source repository"]
+        WEBAPPREPO["🔒 hokopi-webapp<br/>Private source repository"]
         ACTIONS["GitHub Actions<br/>CI/CD"]
         SECRETS["GitHub Environments<br/>Secrets & Variables"]
 
-        WEBAPP --> ACTIONS
+        WEBAPPREPO --> ACTIONS
         SECRETS --> ACTIONS
     end
 
@@ -35,17 +35,17 @@ flowchart TB
         direction TB
 
         subgraph VM["Linux VM<br/>Preprod / Production"]
-            CADDY["Caddy<br/>TLS + Reverse Proxy<br/>:80 / :443"]
+            TRAEFIK["Traefik<br/>TLS + Reverse Proxy<br/>:80 / :443"]
 
-            WEBSITE["Website<br/>Static files"]
-            FRONTEND["React Webapp<br/>Static files"]
+            WEBSITE["Website<br/>Nginx (static files)"]
+            WEBAPP["React Webapp<br/>Nginx (static files)"]
             BACKEND["NestJS API<br/>:3000"]
             OCR["OCR Service<br/>DocTR / Python<br/>:8000"]
             POSTGRES[("PostgreSQL 15<br/>Docker Volume")]
 
-            CADDY --> WEBSITE
-            CADDY --> FRONTEND
-            CADDY -->|"/api"| BACKEND
+            TRAEFIK --> WEBSITE
+            TRAEFIK --> WEBAPP
+            TRAEFIK -->|"/api"| BACKEND
 
             BACKEND --> POSTGRES
             BACKEND --> OCR
@@ -62,7 +62,7 @@ flowchart TB
         AI["AI Providers<br/>Groq / OpenRouter"]
     end
 
-    USER -->|"HTTPS"| CADDY
+    USER -->|"HTTPS"| TRAEFIK
 
     ACTIONS -->|"Deployment"| VM
 
@@ -77,14 +77,18 @@ flowchart TB
 
 The application is deployed using **Docker Compose** on Linux VMs hosted at Hetzner.
 
-| Component         | Role                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------ |
-| **Caddy**         | HTTPS termination, automatic TLS certificates, static file serving and reverse proxy |
-| **Frontend**      | React/Vite HoKoPi web application                                                    |
-| **Website**       | Public HoKoPi marketing website                                                      |
-| **Backend**       | NestJS REST API                                                                      |
-| **OCR**           | Python/DocTR OCR microservice                                                        |
-| **PostgreSQL 15** | Primary relational database                                                          |
+| Component         | Role                                                            |
+| ----------------- | --------------------------------------------------------------- |
+| **Traefik**       | HTTPS termination, automatic TLS certificates and reverse proxy |
+| **Webapp**        | React/Vite HoKoPi application, served internally by Nginx       |
+| **Website**       | Public HoKoPi website, served internally by Nginx               |
+| **Backend**       | NestJS REST API                                                 |
+| **OCR**           | Python/DocTR OCR microservice                                   |
+| **PostgreSQL 15** | Primary relational database                                     |
+
+Traefik discovers only explicitly enabled Docker services (`traefik.enable=true`).
+Its dashboard is not exposed on a public port. TLS certificates are persisted in
+the `letsencrypt` Docker volume.
 
 ## About this repository
 

@@ -3,7 +3,7 @@ name: app
 services:
   postgres:
     image: postgres:15
-    restart: always
+    restart: 'unless-stopped'
     ports:
       - '127.0.0.1:5432:5432' # Expose PostgreSQL only on localhost
     env_file:
@@ -32,7 +32,16 @@ services:
     environment:
       OCR_BASE_URL: http://ocr:8000
       OCR_TIMEOUT_MS: '90000'
-    restart: always
+    restart: 'unless-stopped'
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=Host(`${APP_HOST:?APP_HOST is required}`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend.entrypoints=websecure
+      - traefik.http.routers.backend.tls=true
+      - traefik.http.routers.backend.tls.certresolver=letsencrypt
+      - traefik.http.routers.backend.middlewares=backend-api-prefix
+      - traefik.http.middlewares.backend-api-prefix.stripprefix.prefixes=/api
+      - traefik.http.services.backend.loadbalancer.server.port=3000
 
   ocr:
     build:
@@ -48,7 +57,7 @@ services:
       TORCH_DEVICE: cpu
       RECOGNITION_BATCH_SIZE: '4'
       DETECTOR_BATCH_SIZE: '1'
-    restart: always
+    restart: 'unless-stopped'
     mem_limit: 1800m
     memswap_limit: 1800m
     expose:
@@ -56,23 +65,82 @@ services:
     volumes:
       - ocr_model_cache:/root/.cache
 
-  frontend:
+  webapp:
     build:
-      context: .. # Le contexte est la racine du dépôt (/var/www/mon-app)
-      dockerfile: docker/Dockerfile.frontend # Chemin relatif depuis le contexte
-      target: prod # Utilise l'étape 'prod' de Dockerfile.frontend
+      context: ..
+      dockerfile: docker/Dockerfile.webapp
+      target: prod
+    restart: 'unless-stopped'
+    depends_on:
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.webapp.rule=Host(`${APP_HOST:?APP_HOST is required}`)
+      - traefik.http.routers.webapp.entrypoints=websecure
+      - traefik.http.routers.webapp.tls=true
+      - traefik.http.routers.webapp.tls.certresolver=letsencrypt
+      - traefik.http.services.webapp.loadbalancer.server.port=80
+
+  website:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.website
+      target: prod
+    restart: 'unless-stopped'
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.website.rule=Host(`${WEBSITE_HOST:?WEBSITE_HOST is required}`)
+      - traefik.http.routers.website.entrypoints=websecure
+      - traefik.http.routers.website.tls=true
+      - traefik.http.routers.website.tls.certresolver=letsencrypt
+      - traefik.http.services.website.loadbalancer.server.port=80
+      - traefik.http.routers.website-www.rule=Host(`www.${WEBSITE_HOST:?WEBSITE_HOST is required}`)
+      - traefik.http.routers.website-www.entrypoints=websecure
+      - traefik.http.routers.website-www.tls=true
+      - traefik.http.routers.website-www.tls.certresolver=letsencrypt
+      - traefik.http.routers.website-www.service=website
+      - traefik.http.routers.website-www.middlewares=website-www-redirect
+      - 'traefik.http.middlewares.website-www-redirect.redirectregex.regex=^https?://www\.[^/]+/(.*)'
+      - traefik.http.middlewares.website-www-redirect.redirectregex.replacement=https://${WEBSITE_HOST:?WEBSITE_HOST is required}/$${1}
+      - traefik.http.middlewares.website-www-redirect.redirectregex.permanent=true
+
+  traefik:
+    image: traefik:3.7
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.email=admin@hokopi.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --api=true
+      - --api.insecure=false
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    restart: 'unless-stopped'
+
+  caddy:
+    image: caddy:2-alpine
+    profiles:
+      - legacy
     ports:
       - '80:80'
       - '443:443'
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-    restart: always
-    depends_on:
-      - backend
+    restart: 'no'
 
 volumes:
   pgdata:
   ocr_model_cache:
   caddy_data:
   caddy_config:
+  letsencrypt:

@@ -12,6 +12,9 @@ REPO_KEY_NAME="${REPO_KEY_NAME:-id_rsa}"
 DEPLOY_KEY_NAME="${DEPLOY_KEY_NAME:-id_rsa_app_deploy}"
 SUDOERS_FILE="${SUDOERS_FILE:-/etc/sudoers.d/app-docker}"
 GITHUB_BLANK_VALUE="${GITHUB_BLANK_VALUE:-__BLANK__}"
+SWAP_FILE="${SWAP_FILE:-/swapfile}"
+SWAP_SIZE="${SWAP_SIZE:-2G}"
+SWAPPINESS="${SWAPPINESS:-10}"
 
 BACKUP_USER="${BACKUP_USER:-}"
 BACKUP_SERVER="${BACKUP_SERVER:-}"
@@ -84,6 +87,11 @@ Environment inputs used for GitHub variable values when present:
   BACKEND_MAIL_FROM
   BACKEND_MAIL_REPLYTO
   FRONTEND_STRIPE_PUBLIC_KEY
+
+Swap configuration inputs:
+  SWAP_FILE              Default: /swapfile
+  SWAP_SIZE              Default: 2G
+  SWAPPINESS             Default: 10
 
 GitHub secrets checked by name only, except SSH_KEY which run can create:
   SSH_KEY
@@ -226,16 +234,16 @@ prompt_environment() {
   fi
 
   printf '\nChoose target environment:\n'
-  printf '  1) production\n'
-  printf '  2) preprod\n'
+  printf '  1) preprod\n'
+  printf '  2) production\n'
   local answer
   read -r -p "Environment [1]: " answer
   case "${answer:-1}" in
-    1|production)
-      TARGET_ENV="production"
-      ;;
-    2|preprod)
+    1|preprod)
       TARGET_ENV="preprod"
+      ;;
+    2|production)
+      TARGET_ENV="production"
       ;;
     *)
       fail "Invalid environment choice: ${answer}"
@@ -319,6 +327,85 @@ install_packages() {
 
   if [[ "${#missing[@]}" -gt 0 ]]; then
     run_cmd apt-get install -y --no-install-recommends "${missing[@]}"
+  fi
+}
+
+configure_swap() {
+  info "Checking swap configuration"
+
+  if [[ "${SWAP_FILE}" != /* ]]; then
+    fail "SWAP_FILE must be an absolute path. Got: ${SWAP_FILE}"
+    return
+  fi
+
+  if [[ ! "${SWAP_SIZE}" =~ ^[1-9][0-9]*[MG]$ ]]; then
+    fail "SWAP_SIZE must use a positive MiB or GiB value, for example 2G. Got: ${SWAP_SIZE}"
+    return
+  fi
+
+  if [[ ! "${SWAPPINESS}" =~ ^[0-9]+$ ]] || (( SWAPPINESS < 0 || SWAPPINESS > 100 )); then
+    fail "SWAPPINESS must be an integer from 0 to 100. Got: ${SWAPPINESS}"
+    return
+  fi
+
+  local active_swaps manage_swap_file=false
+  active_swaps="$(swapon --noheadings --raw --output NAME 2>/dev/null | sed '/^$/d' || true)"
+
+  if [[ -n "${active_swaps}" ]]; then
+    ok "Swap is active: $(tr '\n' ' ' <<< "${active_swaps}" | sed 's/[[:space:]]*$//')"
+    if grep -qxF "${SWAP_FILE}" <<< "${active_swaps}"; then
+      manage_swap_file=true
+    fi
+  elif [[ -e "${SWAP_FILE}" ]] && [[ "$(blkid -o value -s TYPE "${SWAP_FILE}" 2>/dev/null || true)" != "swap" ]]; then
+    fail "Swap is inactive and ${SWAP_FILE} exists but is not a swap file. Refusing to overwrite it."
+    return
+  elif [[ "${MODE}" == "check" ]]; then
+    manage_swap_file=true
+    if [[ -e "${SWAP_FILE}" ]]; then
+      change "Would activate existing swap file at ${SWAP_FILE}"
+    else
+      change "Would create and activate ${SWAP_SIZE} swap file at ${SWAP_FILE}"
+    fi
+  else
+    manage_swap_file=true
+    if [[ -e "${SWAP_FILE}" ]]; then
+      change "Activating existing swap file at ${SWAP_FILE}"
+      swapon "${SWAP_FILE}"
+    else
+      change "Creating and activating ${SWAP_SIZE} swap file at ${SWAP_FILE}"
+      fallocate -l "${SWAP_SIZE}" "${SWAP_FILE}"
+      chmod 600 "${SWAP_FILE}"
+      mkswap "${SWAP_FILE}" >/dev/null
+      swapon "${SWAP_FILE}"
+    fi
+  fi
+
+  if [[ "${manage_swap_file}" == true ]]; then
+    if awk -v swap_file="${SWAP_FILE}" '$1 == swap_file && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab; then
+      ok "Swap file is already configured in /etc/fstab."
+    elif [[ "${MODE}" == "check" ]]; then
+      change "Would add ${SWAP_FILE} to /etc/fstab"
+    else
+      printf '%s none swap sw 0 0\n' "${SWAP_FILE}" >> /etc/fstab
+      ok "Swap file was added to /etc/fstab."
+    fi
+  fi
+
+  local current_swappiness swappiness_file expected_swappiness
+  swappiness_file="/etc/sysctl.d/99-hokopi-swappiness.conf"
+  expected_swappiness="vm.swappiness=${SWAPPINESS}"
+  current_swappiness="$(sysctl -n vm.swappiness 2>/dev/null || true)"
+
+  if [[ "${current_swappiness}" == "${SWAPPINESS}" ]] \
+    && [[ -f "${swappiness_file}" ]] \
+    && grep -qxF "${expected_swappiness}" "${swappiness_file}"; then
+    ok "Swappiness is ${SWAPPINESS} and persists in ${swappiness_file}."
+  elif [[ "${MODE}" == "check" ]]; then
+    change "Would set vm.swappiness=${SWAPPINESS} in ${swappiness_file}"
+  else
+    change "Setting vm.swappiness=${SWAPPINESS}"
+    printf '%s\n' "${expected_swappiness}" > "${swappiness_file}"
+    sysctl -w "${expected_swappiness}" >/dev/null
   fi
 }
 
@@ -1049,6 +1136,7 @@ main() {
   check_privileges
   update_system
   install_packages
+  configure_swap
   install_docker
   install_github_cli
   ensure_github_auth

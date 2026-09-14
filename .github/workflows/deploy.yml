@@ -100,6 +100,14 @@ jobs:
           PUBLIC_NOINDEX=${{ env.WEBSITE_NOINDEX }}
           EOT
 
+          echo "🚦 Generating docker/.env"
+          APP_HOST="$(printf '%s' "${{ vars.APP_URL }}" | sed -E 's#^https?://([^/]+).*$#\1#')"
+          WEBSITE_HOST="$(printf '%s' "${{ env.WEBSITE_URL }}" | sed -E 's#^https?://([^/]+).*$#\1#')"
+          cat <<EOT > docker/.env
+          APP_HOST=$APP_HOST
+          WEBSITE_HOST=$WEBSITE_HOST
+          EOT
+
           echo "📝 Generating ops/.env..."
           cat <<EOT > ops/.env
           BACKUP_USER=${{ vars.BACKUP_USER }}
@@ -118,9 +126,9 @@ jobs:
           crontab ops/crontab
 
           echo "🕒 Ensuring PostgreSQL is available for backup"
-          sudo docker compose -f docker/docker-compose.prod.yml up -d postgres
+          sudo docker compose --env-file docker/.env -f docker/docker-compose.prod.yml up -d postgres
 
-          POSTGRES_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q postgres)
+          POSTGRES_CONTAINER=$(sudo docker compose --env-file docker/.env -f docker/docker-compose.prod.yml ps -q postgres)
           if [ -z "$POSTGRES_CONTAINER" ]; then
             echo "::error::❌ PostgreSQL container is not available for backup"
             exit 1
@@ -148,13 +156,12 @@ jobs:
 
           echo "🚀 Docker Compose build & restart"
 
-          sudo docker compose -f docker/docker-compose.prod.yml down
-          sudo docker compose -f docker/docker-compose.prod.yml up --build -d
+          sudo docker compose --env-file docker/.env -f docker/docker-compose.prod.yml up --build -d --remove-orphans
 
           sleep 5
 
-          POSTGRES_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q postgres) 
-          BACKEND_CONTAINER=$(sudo docker compose -f docker/docker-compose.prod.yml ps -q backend)                                 
+          POSTGRES_CONTAINER=$(sudo docker compose --env-file docker/.env -f docker/docker-compose.prod.yml ps -q postgres)
+          BACKEND_CONTAINER=$(sudo docker compose --env-file docker/.env -f docker/docker-compose.prod.yml ps -q backend)
 
           echo "🕒 Waiting PostgreSQL (20s max)"
           RETRIES=10
