@@ -86,8 +86,8 @@ jobs:
           AI_GROQ_API_KEY=${{ secrets.AI_GROQ_API_KEY }}
           EOT
 
-          echo "🌐 Generating frontend/.env.production"
-          cat <<EOT > frontend/.env.production
+          echo "🌐 Generating webapp/.env.production"
+          cat <<EOT > webapp/.env.production
           VITE_API_URL=/api
           VITE_ENV=${{ env.ENVIRONMENT }}
           VITE_STRIPE_PUBLIC_KEY=${{ vars.FRONTEND_STRIPE_PUBLIC_KEY }}

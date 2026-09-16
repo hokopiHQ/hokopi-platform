@@ -63,15 +63,15 @@ services:
     volumes:
       - ocr_model_cache:/root/.cache
 
-  frontend:
+  webapp:
     build:
       context: ..
       dockerfile: docker/Dockerfile.webapp
       target: dev
     volumes:
-      - ../frontend:/app/frontend
+      - ../webapp:/app/webapp
       - ../shared:/app/shared
-      - /app/frontend/node_modules
+      - /app/webapp/node_modules
     ports:
       - '8080:8080'
     command: npm run dev
