@@ -90,6 +90,65 @@ Traefik discovers only explicitly enabled Docker services (`traefik.enable=true`
 Its dashboard is not exposed on a public port. TLS certificates are persisted in
 the `letsencrypt` Docker volume.
 
+## CI/CD
+
+CI/CD is orchestrated by GitHub Actions.
+
+```mermaid
+flowchart TB
+    PR["Pull Request"]
+
+    subgraph CI["CI — Quality & Security"]
+        direction TB
+
+        SECRETS["🔐 Secret Scanning<br/>Gitleaks"]
+
+        subgraph QUALITY["Quality Checks"]
+            direction LR
+
+            subgraph BACKEND["Backend"]
+                direction TB
+                B_LINT["Lint"]
+                B_TEST["Tests"]
+                B_BUILD["Build"]
+
+                B_LINT --> B_TEST --> B_BUILD
+            end
+
+            subgraph WEBAPP["Webapp"]
+                direction TB
+                W_LINT["Lint"]
+                W_BUILD["Build"]
+
+                W_LINT --> W_BUILD
+            end
+        end
+
+        CI_GATE{"CI Passed?"}
+
+        SECRETS --> B_LINT
+        SECRETS --> W_LINT
+
+        B_BUILD --> CI_GATE
+        W_BUILD --> CI_GATE
+    end
+
+    MERGE["PR Approved & Merged"]
+
+    subgraph CD["CD — Deployment"]
+        direction TB
+
+        RELEASE_BUILD["Build"]
+        DEPLOY["Deploy"]
+
+        RELEASE_BUILD --> DEPLOY
+    end
+
+    PR --> SECRETS
+    CI_GATE -->|Yes| MERGE
+    MERGE --> RELEASE_BUILD
+```
+
 ## About this repository
 
 ### Platform mirror workflow and security controls

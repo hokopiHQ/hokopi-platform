@@ -34,21 +34,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Install Gitleaks
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/gitleaks"
 
-          gh release download \
-            --repo gitleaks/gitleaks \
-            --pattern 'gitleaks_*_linux_x64.tar.gz' \
-            --dir "$RUNNER_TEMP/gitleaks"
-
-          tar -xzf "$RUNNER_TEMP"/gitleaks/*.tar.gz \
-            -C "$RUNNER_TEMP/gitleaks" gitleaks
-
-          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+      - uses: ./.github/actions/setupGitleaks
 
       - name: Install git-filter-repo
         run: pipx install git-filter-repo
