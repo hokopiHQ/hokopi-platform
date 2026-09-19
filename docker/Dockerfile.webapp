@@ -32,5 +32,7 @@ RUN npm run build
 
 # HTTP Serve step
 FROM nginx:1-alpine-slim AS prod
+RUN apk add --no-cache jq
+COPY --chmod=755 docker/webapp.entryPoint.sh /docker-entrypoint.d/40-webappConfig.sh
 COPY docker/nginx.webapp.conf /etc/nginx/nginx.conf
 COPY --from=build /app/webapp/dist /usr/share/nginx/html

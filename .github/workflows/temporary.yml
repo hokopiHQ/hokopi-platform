@@ -1,0 +1,33 @@
+name: Temporary
+run-name: 'Temporary · ${{ inputs.label }} · ${{ inputs.check }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: Description of this temporary run
+        type: string
+        required: true
+      check:
+        description: Check to execute
+        type: choice
+        options:
+          - test
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  temporary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check runner test
+        if: inputs.check == 'test'
+        run: |
+          uname -a
+          docker --version
+          ssh -V
+          jq --version

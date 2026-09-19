@@ -10,7 +10,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container: ubuntu:latest
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preprod' }}
     env:
       SSH_USER: ${{ vars.SSH_USER }}
@@ -30,14 +29,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
-
-      - name: Install ssh client
-        run: |
-          if command -v sudo >/dev/null 2>&1; then
-            sudo apt-get update && sudo apt-get install -y openssh-client
-          else
-            apt-get update && apt-get install -y openssh-client
-          fi
 
       - name: Setup SSH
         run: |
@@ -86,11 +77,11 @@ jobs:
           AI_GROQ_API_KEY=${{ secrets.AI_GROQ_API_KEY }}
           EOT
 
-          echo "🌐 Generating webapp/.env.production"
-          cat <<EOT > webapp/.env.production
-          VITE_API_URL=/api
-          VITE_ENV=${{ env.ENVIRONMENT }}
-          VITE_STRIPE_PUBLIC_KEY=${{ vars.FRONTEND_STRIPE_PUBLIC_KEY }}
+          echo "🌐 Generating webapp container environment"
+          cat <<'EOT' > docker/.env.webapp
+          APP_ENV=${{ env.ENVIRONMENT }}
+          API_URL=/api
+          STRIPE_PUBLIC_KEY=${{ vars.FRONTEND_STRIPE_PUBLIC_KEY }}
           EOT
 
           echo "🌍 Generating website/.env.production"
