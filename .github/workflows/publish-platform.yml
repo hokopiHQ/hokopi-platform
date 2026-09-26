@@ -30,7 +30,7 @@ jobs:
           esac
 
       - name: Checkout source
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -45,7 +45,7 @@ jobs:
 
       - name: Generate Platform Publisher token
         id: platform-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           client-id: ${{ vars.GHAPP_PLATFORM_PUBLISHER_CLIENT_ID }}
           private-key: ${{ secrets.GHAPP_PLATFORM_PUBLISHER_PRIVATE_KEY }}

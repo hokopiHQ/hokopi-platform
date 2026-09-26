@@ -1,6 +1,6 @@
-# HoKoPi Platform
+# HoKoPi Delivery & Operations
 
-This is a **generated, read-only public mirror** of HoKoPi's Platform Engineering work.
+This is a **generated, read-only public mirror** of HoKoPi's DevOps, infrastructure and cloud-native delivery work.
 The private Webapp monorepo is the source of truth; each publication rebuilds this
 repository from filtered Git history and allowlisted Platform paths only.
 
@@ -151,7 +151,7 @@ flowchart TB
 
 ## About this repository
 
-### Platform mirror workflow and security controls
+### Mirror workflow and security controls
 
 ```mermaid
 flowchart TD
@@ -197,4 +197,5 @@ flowchart TD
 | 🔒 **GitHub Actions disabled**  | Mirrored workflow definitions are visible, but cannot execute in the public repository.                                                         |
 | 🔒 **Private product boundary** | Application source code, runtime secrets, deployment credentials, private packages, releases, and container images remain private.              |
 
-The public mirror is a **generated, read-only representation of Platform Engineering work**, not an independent deployment repository.
+The public mirror is a **generated, read-only representation of HoKoPi's current
+delivery and operations stack**, not an independent deployment repository.
