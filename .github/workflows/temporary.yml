@@ -1,19 +1,17 @@
 name: Temporary
-run-name: 'Temporary · ${{ inputs.label }} · ${{ inputs.check }}'
+run-name: 'Temporary'
 
 on:
   workflow_dispatch:
     inputs:
-      label:
-        description: Description of this temporary run
-        type: string
-        required: true
       check:
         description: Check to execute
         type: choice
         options:
-          - test
+          - none
+          - info
         required: true
+        default: none
 
 permissions:
   contents: read
@@ -24,10 +22,18 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Check runner test
-        if: inputs.check == 'test'
+      - name: Check runner info
+        if: inputs.check == 'info'
         run: |
           uname -a
           docker --version
           ssh -V
           jq --version
+
+      - uses: ./.github/actions/detectChanges
+        id: changes
+
+      - name: echo detection
+        run: |
+          echo "backend = ${{steps.changes.outputs.backend}}"
+          echo "webapp = ${{steps.changes.outputs.webapp}}"
