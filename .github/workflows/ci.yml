@@ -36,7 +36,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: SAST - Semgrep
         continue-on-error: true
@@ -48,6 +48,14 @@ jobs:
               --config auto \
               --error \
               /src
+  sca:
+    name: Security >> Dependencies (audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Scan dependency vulnerabilities
+        uses: ./.github/actions/dependencyScan
 
   backend:
     name: Quality >> Backend

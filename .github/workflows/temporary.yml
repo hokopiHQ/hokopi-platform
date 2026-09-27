@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   temporary:
@@ -33,7 +34,10 @@ jobs:
       - uses: ./.github/actions/detectChanges
         id: changes
 
-      - name: echo detection
+      - name: Display detected changes
         run: |
           echo "backend = ${{steps.changes.outputs.backend}}"
           echo "webapp = ${{steps.changes.outputs.webapp}}"
+
+      - name: Scan dependency vulnerabilities
+        uses: ./.github/actions/dependencyScan
