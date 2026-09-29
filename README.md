@@ -92,16 +92,22 @@ the `letsencrypt` Docker volume.
 
 ## CI/CD
 
-CI/CD is orchestrated by GitHub Actions.
+CI, Delivery and deployment are orchestrated by GitHub Actions. CI validates pull
+requests. Delivery produces and scans the container images after a push to
+`develop`; it does not deploy them yet.
 
 ```mermaid
 flowchart TB
     PR["Pull Request"]
+    MERGE["PR approved & merged"]
+    DEVELOP["Push to develop"]
 
     subgraph CI["CI — Quality & Security"]
         direction TB
 
         SECRETS["🔐 Secret Scanning<br/>Gitleaks"]
+        SAST["🔎 SAST (audit)<br/>Semgrep"]
+        SCA["📦 Dependency Scan (audit)<br/>Trivy"]
 
         subgraph QUALITY["Quality Checks"]
             direction LR
@@ -133,21 +139,59 @@ flowchart TB
         W_BUILD --> CI_GATE
     end
 
-    MERGE["PR Approved & Merged"]
-
-    subgraph CD["CD — Deployment"]
+    subgraph DELIVERY["Delivery — Container Images"]
         direction TB
 
-        RELEASE_BUILD["Build"]
-        DEPLOY["Deploy"]
+        DELIVERY_SCA["📦 Dependency Scan (audit)<br/>Trivy"]
 
-        RELEASE_BUILD --> DEPLOY
+        subgraph IMAGES["Build and scan in parallel"]
+            direction LR
+            BACKEND_IMAGE["Backend image<br/>Build → Trivy scan (audit)"]
+            WEBAPP_IMAGE["Webapp image<br/>Build → Trivy scan (audit)"]
+        end
+
+        GHCR["🔒 GitHub Container Registry<br/>sha-&lt;commit SHA&gt; + latest"]
+
+        DELIVERY_SCA --> BACKEND_IMAGE
+        DELIVERY_SCA --> WEBAPP_IMAGE
+        BACKEND_IMAGE --> GHCR
+        WEBAPP_IMAGE --> GHCR
+    end
+
+    subgraph DEPLOYMENT["Deployment — Current workflow"]
+        direction TB
+
+        DEPLOY["Checkout source on VM<br/>Docker Compose build and restart"]
+
     end
 
     PR --> SECRETS
+    PR --> SAST
+    PR --> SCA
     CI_GATE -->|Yes| MERGE
-    MERGE --> RELEASE_BUILD
+    MERGE --> DEVELOP
+    DEVELOP --> DELIVERY_SCA
+    DEVELOP --> DEPLOY
 ```
+
+The `Delivery` workflow runs on pushes to `develop` and can also be started
+manually. It scans project dependencies, then builds the backend and webapp
+images in parallel. Each image is scanned for HIGH and CRITICAL vulnerabilities
+before publication to the private GitHub Container Registry (GHCR).
+
+Published images are named `ghcr.io/hokopihq/hokopi-backend` and
+`ghcr.io/hokopihq/hokopi-webapp`. Every image receives an immutable
+`sha-<commit SHA>` tag and the moving `latest` tag.
+
+The Trivy dependency and image scans currently run in audit mode: their reports
+are visible in the GitHub Actions logs and job summaries, while findings do not
+block publication. This makes the vulnerability baseline visible before scans
+become delivery gates.
+
+The current `Deploy` workflow remains independent of Delivery: it checks out
+the source directly on the target VM and rebuilds with Docker Compose. A later
+evolution can make deployment consume the published image digest after a
+successful Delivery run.
 
 ## About this repository
 

@@ -14,7 +14,7 @@ permissions:
 jobs:
   secret-scan:
     name: Security >> Secrets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -27,7 +27,7 @@ jobs:
 
   sast:
     name: Security >> SAST (audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
@@ -50,7 +50,7 @@ jobs:
               /src
   sca:
     name: Security >> Dependencies (audit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
@@ -59,7 +59,7 @@ jobs:
 
   backend:
     name: Quality >> Backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: secret-scan
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -96,7 +96,7 @@ jobs:
 
   webapp:
     name: Quality >> Webapp
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: secret-scan
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6

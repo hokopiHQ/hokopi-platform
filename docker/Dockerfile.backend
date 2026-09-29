@@ -17,11 +17,7 @@ WORKDIR /app
 COPY shared shared
 COPY backend/ backend
 WORKDIR /app/backend
-RUN if [ -f .env.production ]; then \
-        NODE_ENV=production npx prisma generate; \
-    else \
-        npx prisma generate; \
-    fi
+RUN DATABASE_URL=postgresql://user:password@localhost:5432/database npx prisma generate
 RUN npm run build
 
 # Étape prod

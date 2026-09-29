@@ -15,21 +15,24 @@ on:
 
 permissions:
   contents: read
-  packages: read
+  packages: write
 
 jobs:
   temporary:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Check runner info
+        continue-on-error: true
         if: inputs.check == 'info'
         run: |
           uname -a
           docker --version
           ssh -V
           jq --version
+          lsb_release -a 
+          cat /etc/os-release
 
       - uses: ./.github/actions/detectChanges
         id: changes
@@ -39,5 +42,14 @@ jobs:
           echo "backend = ${{steps.changes.outputs.backend}}"
           echo "webapp = ${{steps.changes.outputs.webapp}}"
 
-      - name: Scan dependency vulnerabilities
-        uses: ./.github/actions/dependencyScan
+  changes:
+    runs-on: ubuntu-24.04
+    name: Detect changed components
+    outputs:
+      backend: ${{ steps.detectChanges.outputs.backend }}
+      webapp: ${{ steps.detectChanges.outputs.webapp }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - id: detectChanges
+        uses: ./.github/actions/detectChanges
